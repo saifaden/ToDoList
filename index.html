@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>to do list</title>
+    <style>
+        body{
+            height: 96vh;
+            width: 99vw;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+        }
+        header{
+            background-color: blue;
+            color: #1da1f2;
+            text-align: center;
+            font-size: xx-large;
+            font-weight: bold;
+        }
+        main{
+            overflow: auto;
+        }
+        #todolist{
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: aqua;
+            text-align: center;
+            line-height: 70px;
+            position: absolute;
+            bottom: 20%;
+            right: 10%;
+            cursor: pointer;
+
+        }
+        #task{
+            display: none;
+            position: absolute;
+            top: 8%;
+            right: 45%;
+            background-color: antiquewhite;
+            padding: 2%;
+        }
+        .task{
+            background-color: #1da1f2;
+            font-size: large;
+            font-weight: bold;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+        }
+        .task div {
+            width: 15%;
+        }
+        .task div button {
+            margin: auto 5%;
+        }
+        footer{
+            width: 99%;
+            display: flex;
+            justify-content: space-around;
+            position: absolute;
+            bottom: 1%;
+        }
+        footer *{
+            cursor: pointer;
+            width: 5%;
+        }
+        .active{
+            border-bottom: 5px solid greenyellow;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div>to do list</div> 
+        <div id="todolist" onclick="showNav()">add</div>
+        <div id="task">
+            <input type="text" placeholder="task name">
+            <button onclick="addTask()">ADD</button>
+        </div>
+    </header>
+    <main></main>
+    <footer>
+        <img class="active" src="assets/new.jpg" alt="new">
+        <img src="assets/finish.png" alt="finish">
+        <img src="assets/archive.jpg" alt="archive">
+    </footer>
+</body>
+<script>
+        onerror=function(msg,url,l,col,err){
+            console.log(`${msg} in line: ${l}`);
+            
+            return true;
+        }
+
+        var isshow=false,
+        taskDiv=document.getElementById("task");
+        if (localStorage['status']) {
+            localStorage.setItem("status","new");
+        }
+        
+        getTasks("new");
+        // add event to button footer
+        let btnsfooter=document.body.querySelectorAll("footer *");
+        btnsfooter.forEach(function(div,index) {
+            div.addEventListener("click",function() {
+                btnsfooter.forEach(function(item) {
+                    item.classList.remove("active");
+                });
+                this.className="active";
+                switch (index) {
+                    case 0:
+                        localStorage.setItem("status","new");
+                        getTasks("new");
+                        break;
+                    case 1:
+                        localStorage.setItem("status","finish");
+                        getTasks("finish");
+                        break;
+                    case 2:
+                        localStorage.setItem("status","archive");
+                        getTasks("archive");
+                        break;
+                    default:
+                        break;
+                }
+                
+            })
+        });
+        // button to show and hidden task name field
+        function showNav() {
+            if (isshow) {
+                isshow=false;
+                taskDiv.style.display="none";
+            }else{
+                isshow=true;
+                taskDiv.style.display="block";
+                taskDiv.children[0].focus();
+            }
+        }
+
+        function addTask() {
+            let addrequst=new XMLHttpRequest();
+            addrequst.open("post","dataMange.php");
+            addrequst.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            addrequst.send(`request=newTask&taskName=${taskDiv.children[0].value}`);
+            addrequst.onload=function(){
+                if (this.responseText==1) {
+                    localStorage.setItem("status","new");
+                    getTasks("new");
+                }else{
+                    alert("added faild");
+                    console.log(this.responseText);
+                    
+                }
+            }
+            taskDiv.children[0].value="";
+        }
+        
+        function getTasks(status) {
+            let body=document.body.children[1];
+            let getRequest=new XMLHttpRequest();
+            getRequest.open("post","dataMange.php");
+            getRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            getRequest.send(`request=getTasks&status=${status}`);
+            getRequest.onload=function(){
+                let tasks=JSON.parse(this.responseText);
+                document.body.children[1].innerHTML="";
+                if (tasks.length>0) {
+                    for(index in tasks){
+                        let hr=document.createElement("hr"),
+                        tasksDiv=document.createElement("div");
+                        timeDiv=document.createElement("div");
+                        tasksDiv.innerText=tasks[index]["name"];
+                        timeDiv.append(tasks[index]["date"]);
+                        tasksDiv.className="task";
+                        tasksDiv.appendChild(timeDiv);
+                        switch (status) {
+                            case "new":
+                                tasksDiv.innerHTML+=`<div><button onclick=editTask('editTask','finish','${tasks[index]["id"]}')>finish</button><button onclick=editTask('editTask','archive','${tasks[index]["id"]}')>archive</button><button onclick=deleteTask('deleteTask','${tasks[index]["id"]}')>delete</button></div>`;
+                                    break;
+                            case "finish":
+                                tasksDiv.innerHTML+=`<div><button onclick=editTask('editTask','archive','${tasks[index]["id"]}')>archive</button><button onclick=deleteTask('deleteTask','${tasks[index]["id"]}')>delete</button></div>`;
+                                break;
+                            case "archive":
+                                tasksDiv.innerHTML+=`<div><button onclick=editTask('editTask','finish','${tasks[index]["id"]}')>finish</button><button onclick=deleteTask('deleteTask','${tasks[index]["id"]}')>delete</button></div>`;
+                                break;
+                            default:
+                                break;
+                        }
+                        
+                        document.body.children[1].appendChild(tasksDiv);
+                        document.body.children[1].appendChild(hr);
+                }
+                }else{
+                    body.innerText="no task in "+status+" tasks";
+                }
+                
+            }
+        }
+        
+        function editTask(request,status,id) {
+            let editRequest=new XMLHttpRequest();
+            editRequest.open("post","dataMange.php");
+            editRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            editRequest.send(`request=${request}&status=${status}&id=${id}`);
+            editRequest.onload=function(){
+                if (this.responseText==1) {
+                    alert("edit succseful");
+                    getTasks(localStorage.getItem("status"));
+                }else{
+                    alert("edit faild");
+                }
+            }
+            
+        }
+        
+        function deleteTask(request,id) {
+            let deleteRequest=new XMLHttpRequest();
+            deleteRequest.open("post","dataMange.php");
+            deleteRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            deleteRequest.send(`request=${request}&id=${id}`);
+            deleteRequest.onload=function(){
+                if (this.responseText==1) {
+                    alert("delete succseful");
+                    getTasks(localStorage.getItem("status"));
+                }else{
+                    alert("delete faild");
+                    console.log(this.responseText);
+                    
+                }
+            }
+        }
+        
+    </script>
+</html>
