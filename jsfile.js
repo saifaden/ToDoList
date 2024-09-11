@@ -12,6 +12,7 @@ if (localStorage['status']) {
  // button to show and hidden task name field
 $("#todolist").click(function () {
     $("#task").slideToggle(300);
+    $("#task input").focus();
 });
 
 // add event to button footer
@@ -46,6 +47,7 @@ getTasks("new");
 // define tasks
 function addTask() {
     let addrequst=new XMLHttpRequest();
+    
     addrequst.open("post","dataMange.php");
     addrequst.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
     addrequst.send(`request=newTask&taskName=${taskInput.value}`);
@@ -53,6 +55,11 @@ function addTask() {
         if (this.responseText==1) {
             localStorage.setItem("status","new");
             getTasks("new");
+            $("img").each(function() {
+                $(this).removeClass("active");
+                $("img[alt='new']").addClass("active");
+            })
+            
         }else{
             alert("added faild");
             console.log(this.responseText);
